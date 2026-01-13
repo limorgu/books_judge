@@ -1,0 +1,19 @@
+# never commit raw images
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# local envs
+.venv/
+my311/
+__pycache__/
+
+/Users/limorkissos/Documents/books/my311/bin/python /Users/limorkissos/Documents/books/books_judge/src/reextract_bad_jsons.py
+# secrets
+.env
+*key*
+
+
+
+
