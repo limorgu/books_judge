@@ -1,88 +1,122 @@
-books_judge
-Book-page extraction pipeline + evaluation (working)
-Next goal: content-based book attribution
-This repository documents an end-to-end pipeline for extracting structured text from photographed book pages and organizing it into analyzable data.
-The pipeline is working and stable for:
-text extraction
-page-level metadata capture
-JSON generation
-table aggregation
-basic evaluation
-The open problem (Step B) is book/author attribution at scale when metadata is not printed on interior pages.
+books_judge — Minimal, Non-Hallucinatory Book Page Extraction
 
-What works (current state)
-✔ Step 1 — Page-level extraction (WORKING)
-We built a reliable extraction pipeline using OpenAI Vision + structured outputs.
-Input
-Photos of book pages (phone scans)
-Stored locally (not committed)
-Output
-One JSON per image (image.jpg.json)
-Fields:
-text (full page text, paragraph-preserved)
-page_number (if visible)
-book_name (if explicitly printed)
-author (if explicitly printed)
-source_file
-Key design decision
-The extractor is conservative.
-It does not guess book name or author if they are not visible on the page.
-Script
-src/extract_openai.py
+This repository demonstrates a simple, reliable pipeline for working with photos of book pages using AI without hallucinating metadata.
 
-Behavior
-Reads images from:
-~/Documents/books/inbox_photos
-Skips images that already have a .json sidecar
-Automatically resizes/compresses images under upload limits
-Produces structured JSON using OpenAI’s json_schema output
-Run
-source ~/Documents/books/my311/bin/activate
-export OPENAI_API_KEY="YOUR_KEY"
-python ~/Documents/books/books_judge/src/extract_openai.py
+It intentionally avoids complex agents, judges, or completion logic and instead combines:
+
+deterministic structure (folders, rules)
+
+AI where it works well (OCR + light classification)
+
+What This Repo Contains (Only Two Scripts)
+1️⃣ extract_openai.py — Image → JSON
+
+Extracts exact page text from images and saves one JSON per page.
+
+What it does
+
+Reads book page images from a structured folder
+
+Uses OpenAI vision to extract only what is visible
+
+Attaches book + author from folder name (not inference)
+
+Optionally classifies life stage (childhood / adulthood / both / unclear)
+
+Folder structure (important):
+
+inbox_photos/
+└── book_name_author_name/
+    ├── page_001.jpg
+    ├── page_002.jpg
 
 
-✔ Step 2 — Aggregation into a table (WORKING)
-All extracted page JSONs can be merged into a single review table for inspection.
-Script
-src/make_extraction_table.py
+Output (one JSON per image):
 
-Output
-~/Documents/books/extraction_table.csv
-
-Columns
-filename
-page_number
-book_name
-author
-text_length
-text_preview
-This makes it easy to:
-scan coverage
-spot OCR issues
-identify missing metadata
-Run
-python ~/Documents/books/books_judge/src/make_extraction_table.py
-open ~/Documents/books/extraction_table.csv
+{
+  "book_name": "...",
+  "author_name": "...",
+  "page_number": null,
+  "text": "Exact extracted text...",
+  "life_stage_flag": "childhood | adulthood | both | unclear",
+  "source_file": "page_001.jpg",
+  "reference": "path/to/page_001.jpg"
+}
 
 
-✔ Step 3 — Quality checks & evaluation (WORKING)
-We added lightweight “LLM-as-judge” checks to understand extraction quality and missing fields.
-Implemented checks
-Invalid / broken JSON detection
-Missing field audit
-Visibility judgment (is metadata actually visible on the page?)
-These steps confirmed that most missing book_name / author fields are expected, not extraction failures.
-Interior book pages usually do not repeat title or author.
+Rules:
 
-⚠ Step B — Open problem (NOT SOLVED YET)
-The real challenge
-After aggregation, the table still contains:
-inconsistent book_name values
-confusion between:
-book title
-chapter title
-author name
-many null book/author entries (by design)
-This is not an OCR problem.
-It is a content attribution problem.
+No guessing book titles or authors
+
+Page numbers only if visible
+
+Missing metadata stays missing by design
+
+2️⃣ extract_table.py — JSON → CSV
+
+Collects all extracted JSON files into a readable CSV table.
+
+What it does
+
+Reads all page-level JSONs
+
+Sorts rows by book_name → page_number
+
+Adds text length + preview for review
+
+Outputs a clean CSV for inspection
+
+Output:
+
+extraction_table.csv
+
+Quick Inspection with Pandas
+
+Once the CSV is created, you can explore it immediately:
+
+import pandas as pd
+
+df = pd.read_csv("extraction_table.csv")
+
+# Sort again if needed
+df = df.sort_values(["book_name", "page_number"])
+
+# Quick sanity checks
+df[["book_name", "author_name"]].drop_duplicates()
+df["life_stage_flag"].value_counts()
+
+# Preview text
+df[["book_name", "page_number", "text"]].head()
+
+
+This makes missing metadata, ordering issues, or OCR problems obvious and inspectable.
+
+Why This Approach Works
+
+Key principles behind this design:
+
+Structure beats inference
+Folder names are more reliable than asking a model to guess book titles.
+
+Extraction ≠ completion
+Most pages do not contain titles or chapter names — filling them in would hallucinate.
+
+Use ML where it’s mature
+OCR and coarse classification work well; metadata completion does not.
+
+Simple pipelines are easier to trust
+Fewer moving parts → fewer silent errors.
+
+Outcome
+
+The result is a clean, auditable dataset:
+
+page-level text
+
+stable metadata
+
+human-readable table
+
+no hidden assumptions
+
+This dataset is ready for downstream analysis, clustering, or research — without needing to “fix” hallucinated fields later.
