@@ -1,108 +1,140 @@
-books_judge
+Absolutely — below is a **clean, corrected, fully formatted `README.md`** you can copy-paste **as is**.
+I fixed spacing, headings, code blocks, and wording so it renders properly on GitHub and reads professional, clear, and confident.
 
-A simple, reliable pipeline for extracting book text from images — without hallucinating metadata
+---
 
-This repository documents a minimal, human-controlled workflow for turning photographed book pages into structured data (JSON + CSV), while avoiding common AI failure modes such as invented book titles, authors, or chapters.
+````md
+# books_judge
 
-The design principle is simple:
+**A simple, reliable pipeline for extracting book text from images — without hallucinating metadata**
 
-Let AI do what it’s good at (reading text),
-and let humans control structure and meaning.
+This repository documents a minimal, human-controlled workflow for turning photographed book pages into structured data (JSON + CSV), while avoiding common AI failure modes such as invented book names, author names, or chapter titles.
 
-What this repository does
+The core design principle is simple:
+
+> **Let AI do what it’s good at (reading text), and let humans control structure and meaning.**
+
+---
+
+## What this repository does
 
 Using two small Python scripts, you can:
 
-Extract exact text from book page photos
+### 1. Extract exact text from book page photos
+- One JSON file per page
+- Includes:
+  - `book_name`
+  - `author`
+  - `page_number` (only if visible)
+  - exact page text
+  - basic semantic flags (e.g. childhood / adulthood)
 
-One JSON file per page
+### 2. Combine all JSON files into a readable CSV table
+- Sorted by **book name → page number**
+- Easy to inspect with Excel, Numbers, Google Sheets, or pandas
 
-Includes book name, author name, page number (if visible), and full text
+**No databases. No agents. No MCP. No guessing.**
 
-Combine all JSON files into a readable CSV table
+---
 
-Ordered by book name → page number
+## Folder structure (important)
 
-Easy to review, sort, and analyze with Excel, Numbers, or pandas
+Photos are stored **methodically**, not randomly.
 
-No databases.
-No agents.
-No MCP.
-No guessing.
-
-Folder structure (important)
-
-Your photos are stored methodically, not randomly.
-
+```text
 inbox_photos/
 └── Book_Name_Author_Name/
     ├── IMG_001.jpg
     ├── IMG_002.jpg
     └── IMG_003.jpg
+````
 
+### Example
 
-Example:
-
+```text
 inbox_photos/
 └── Its_Just_Your_Imagination_Revital_Shiri_Horowitz/
+```
 
+### Why this matters
 
-This structure is intentional:
+* **Book name and author are taken from the folder**
+* The model is **never asked to guess them**
+* This alone removes a major source of hallucination
 
-Book name and author are taken from the folder
+---
 
-The model is never asked to guess them
+## Step 0 — One-time setup (no coding knowledge required)
 
-This alone eliminates a major source of hallucination
-
-Step 0 — One-time setup (no coding knowledge required)
-1. Install Python
+### Install Python
 
 Make sure Python 3.10+ is installed:
 
+```bash
 python --version
+```
 
+If not, download from:
+[https://www.python.org](https://www.python.org)
 
-If not, download from: https://www.python.org
+---
 
-2. Create a virtual environment (recommended)
+### Create a virtual environment (recommended)
 
 From the project folder:
 
+```bash
 python -m venv venv
 source venv/bin/activate   # macOS / Linux
+```
 
+You should now see `(venv)` in your terminal.
 
-You should now see (venv) in your terminal.
+---
 
-3. Install dependencies
+### Install dependencies
+
+```bash
 pip install openai pillow pandas
+```
 
-4. Set your OpenAI API key (once)
-macOS / Linux (recommended)
+---
+
+### Set your OpenAI API key (once)
+
+macOS / Linux:
+
+```bash
 export OPENAI_API_KEY="your-key-here"
+```
 
+To make this permanent, add the line above to:
 
-To make this permanent, add it to ~/.zshrc or ~/.bashrc.
+* `~/.zshrc` or
+* `~/.bashrc`
 
-The key is not stored in code or in this repository.
+> The API key is **not stored in code** and **not committed to the repository**.
 
-Step 1 — Extract text from images
-Script
+---
 
+## Step 1 — Extract text from images
+
+### Script
+
+```text
 extract_openai.py
+```
 
-What it does
+### What it does
 
-Walks through all subfolders under inbox_photos/
+* Walks through all subfolders under `inbox_photos/`
+* Reads each image
+* Extracts **only what is visible**
+* Writes a `.json` file next to each image
 
-Reads each image
+### Fields written per page
 
-Extracts only what is visible
-
-Writes a .json file next to each image
-
-Fields written per page
+```json
 {
   "book_name": "...",
   "author": "...",
@@ -112,118 +144,126 @@ Fields written per page
   "source_file": "IMG_001.jpg",
   "reference": "full/path/to/image"
 }
+```
 
-Run it
+### Run it
+
+```bash
 python extract_openai.py
-
+```
 
 Re-running the script is safe:
 
-Images with existing .json files are skipped automatically
+* Images with existing `.json` files are skipped automatically
 
-Step 2 — Build a review table (CSV)
-Script
+---
 
+## Step 2 — Build a review table (CSV)
+
+### Script
+
+```text
 extract_table.py
+```
 
-What it does
+### What it does
 
-Reads all JSON files recursively
+* Reads all JSON files recursively
+* Combines them into a single CSV
+* Sorts by:
 
-Combines them into a single CSV
+  1. `book_name`
+  2. `page_number`
+* Creates short text previews for inspection
 
-Sorts by:
+### Run it
 
-book_name
-
-page_number
-
-Creates short text previews for inspection
-
-Run it
+```bash
 python extract_table.py
+```
 
-Output
+### Output
+
+```text
 extraction_table.csv
-
+```
 
 You can open this file with:
 
-Excel
+* Excel
+* Numbers
+* Google Sheets
+* pandas
 
-Numbers
+---
 
-Google Sheets
+### Optional — Inspect with pandas
 
-pandas
-
-Optional — Inspect with pandas
+```python
 import pandas as pd
 
 df = pd.read_csv("extraction_table.csv")
-df.sort_values(["book_name", "page_number"]).head()
+df = df.sort_values(["book_name", "page_number"])
+df.head()
+```
 
+Useful for:
 
-This is useful for:
+* spotting missing page numbers
+* checking text quality
+* preparing downstream analysis
 
-spotting missing page numbers
+---
 
-checking text quality
+## Why this works (and avoids hallucination)
 
-preparing downstream analysis
+### Key design decisions
 
-Why this works (and avoids hallucination)
+* **Metadata is not inferred**
+  Book name and author come from folders, not the model
 
-Key design decisions:
+* **Visibility is respected**
+  If a page number isn’t printed, it stays `null`
 
-Metadata is not inferred
+* **No “completion judge”**
+  Most pages don’t contain titles or authors
+  Asking a model to fill them invites hallucination
 
-Book name and author come from folders, not the model
+* **Simple rules > clever agents**
+  No MCP, no orchestration, no guesswork
 
-Visibility is respected
+If metadata is missing because it is **not present on the page**, the correct solution is **rules you control** (e.g. propagation), not model guessing.
 
-If a page number isn’t printed, it stays null
+---
 
-No “completion judge”
+## What this enables next
 
-Pages do not usually contain titles or authors
+* Chapter-level grouping (by propagating last-seen headings)
+* Thematic labeling
+* Embeddings and search
+* Quantitative narrative analysis
+* Careful, auditable AI-assisted reading
 
-Asking a model to fill them invites hallucination
+All on **clean, human-verifiable data**.
 
-Simple rules > clever agents
+---
 
-No MCP, no orchestration, no guesswork
-
-If metadata is missing because it is not present on the page, the correct solution is propagation rules you control, not model guessing.
-
-What this enables next
-
-Chapter-level grouping (by propagating last seen heading)
-
-Thematic labeling
-
-Embeddings / search
-
-Quantitative narrative analysis
-
-Careful, auditable AI-assisted reading
-
-All on clean, human-verifiable data.
-
-Repository philosophy
+## Repository philosophy
 
 This project favors:
 
-clarity over cleverness
-
-human control over autonomy
-
-reproducibility over novelty
+* clarity over cleverness
+* human control over autonomy
+* reproducibility over novelty
 
 If you are working with sensitive texts, memoirs, or research material, this approach keeps you in charge.
 
-License / usage
+---
+
+## License / usage
 
 Use freely.
 Adapt carefully.
-Do not trust models with facts you can structure yourself.
+**Do not trust models with facts you can structure yourself.**
+
+
