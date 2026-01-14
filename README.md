@@ -1,122 +1,229 @@
-books_judge — Minimal, Non-Hallucinatory Book Page Extraction
+books_judge
 
-This repository demonstrates a simple, reliable pipeline for working with photos of book pages using AI without hallucinating metadata.
+A simple, reliable pipeline for extracting book text from images — without hallucinating metadata
 
-It intentionally avoids complex agents, judges, or completion logic and instead combines:
+This repository documents a minimal, human-controlled workflow for turning photographed book pages into structured data (JSON + CSV), while avoiding common AI failure modes such as invented book titles, authors, or chapters.
 
-deterministic structure (folders, rules)
+The design principle is simple:
 
-AI where it works well (OCR + light classification)
+Let AI do what it’s good at (reading text),
+and let humans control structure and meaning.
 
-What This Repo Contains (Only Two Scripts)
-1️⃣ extract_openai.py — Image → JSON
+What this repository does
 
-Extracts exact page text from images and saves one JSON per page.
+Using two small Python scripts, you can:
 
-What it does
+Extract exact text from book page photos
 
-Reads book page images from a structured folder
+One JSON file per page
 
-Uses OpenAI vision to extract only what is visible
+Includes book name, author name, page number (if visible), and full text
 
-Attaches book + author from folder name (not inference)
+Combine all JSON files into a readable CSV table
 
-Optionally classifies life stage (childhood / adulthood / both / unclear)
+Ordered by book name → page number
 
-Folder structure (important):
+Easy to review, sort, and analyze with Excel, Numbers, or pandas
+
+No databases.
+No agents.
+No MCP.
+No guessing.
+
+Folder structure (important)
+
+Your photos are stored methodically, not randomly.
 
 inbox_photos/
-└── book_name_author_name/
-    ├── page_001.jpg
-    ├── page_002.jpg
+└── Book_Name_Author_Name/
+    ├── IMG_001.jpg
+    ├── IMG_002.jpg
+    └── IMG_003.jpg
 
 
-Output (one JSON per image):
+Example:
 
-{
-  "book_name": "...",
-  "author_name": "...",
-  "page_number": null,
-  "text": "Exact extracted text...",
-  "life_stage_flag": "childhood | adulthood | both | unclear",
-  "source_file": "page_001.jpg",
-  "reference": "path/to/page_001.jpg"
-}
+inbox_photos/
+└── Its_Just_Your_Imagination_Revital_Shiri_Horowitz/
 
 
-Rules:
+This structure is intentional:
 
-No guessing book titles or authors
+Book name and author are taken from the folder
 
-Page numbers only if visible
+The model is never asked to guess them
 
-Missing metadata stays missing by design
+This alone eliminates a major source of hallucination
 
-2️⃣ extract_table.py — JSON → CSV
+Step 0 — One-time setup (no coding knowledge required)
+1. Install Python
 
-Collects all extracted JSON files into a readable CSV table.
+Make sure Python 3.10+ is installed:
+
+python --version
+
+
+If not, download from: https://www.python.org
+
+2. Create a virtual environment (recommended)
+
+From the project folder:
+
+python -m venv venv
+source venv/bin/activate   # macOS / Linux
+
+
+You should now see (venv) in your terminal.
+
+3. Install dependencies
+pip install openai pillow pandas
+
+4. Set your OpenAI API key (once)
+macOS / Linux (recommended)
+export OPENAI_API_KEY="your-key-here"
+
+
+To make this permanent, add it to ~/.zshrc or ~/.bashrc.
+
+The key is not stored in code or in this repository.
+
+Step 1 — Extract text from images
+Script
+
+extract_openai.py
 
 What it does
 
-Reads all page-level JSONs
+Walks through all subfolders under inbox_photos/
 
-Sorts rows by book_name → page_number
+Reads each image
 
-Adds text length + preview for review
+Extracts only what is visible
 
-Outputs a clean CSV for inspection
+Writes a .json file next to each image
 
-Output:
+Fields written per page
+{
+  "book_name": "...",
+  "author": "...",
+  "page_number": 42,
+  "text": "... exact page text ...",
+  "life_stage_flag": "childhood | adulthood | both | unclear",
+  "source_file": "IMG_001.jpg",
+  "reference": "full/path/to/image"
+}
 
+Run it
+python extract_openai.py
+
+
+Re-running the script is safe:
+
+Images with existing .json files are skipped automatically
+
+Step 2 — Build a review table (CSV)
+Script
+
+extract_table.py
+
+What it does
+
+Reads all JSON files recursively
+
+Combines them into a single CSV
+
+Sorts by:
+
+book_name
+
+page_number
+
+Creates short text previews for inspection
+
+Run it
+python extract_table.py
+
+Output
 extraction_table.csv
 
-Quick Inspection with Pandas
 
-Once the CSV is created, you can explore it immediately:
+You can open this file with:
 
+Excel
+
+Numbers
+
+Google Sheets
+
+pandas
+
+Optional — Inspect with pandas
 import pandas as pd
 
 df = pd.read_csv("extraction_table.csv")
-
-# Sort again if needed
-df = df.sort_values(["book_name", "page_number"])
-
-# Quick sanity checks
-df[["book_name", "author_name"]].drop_duplicates()
-df["life_stage_flag"].value_counts()
-
-# Preview text
-df[["book_name", "page_number", "text"]].head()
+df.sort_values(["book_name", "page_number"]).head()
 
 
-This makes missing metadata, ordering issues, or OCR problems obvious and inspectable.
+This is useful for:
 
-Why This Approach Works
+spotting missing page numbers
 
-Key principles behind this design:
+checking text quality
 
-Structure beats inference
-Folder names are more reliable than asking a model to guess book titles.
+preparing downstream analysis
 
-Extraction ≠ completion
-Most pages do not contain titles or chapter names — filling them in would hallucinate.
+Why this works (and avoids hallucination)
 
-Use ML where it’s mature
-OCR and coarse classification work well; metadata completion does not.
+Key design decisions:
 
-Simple pipelines are easier to trust
-Fewer moving parts → fewer silent errors.
+Metadata is not inferred
 
-Outcome
+Book name and author come from folders, not the model
 
-The result is a clean, auditable dataset:
+Visibility is respected
 
-page-level text
+If a page number isn’t printed, it stays null
 
-stable metadata
+No “completion judge”
 
-human-readable table
+Pages do not usually contain titles or authors
 
-no hidden assumptions
+Asking a model to fill them invites hallucination
 
-This dataset is ready for downstream analysis, clustering, or research — without needing to “fix” hallucinated fields later.
+Simple rules > clever agents
+
+No MCP, no orchestration, no guesswork
+
+If metadata is missing because it is not present on the page, the correct solution is propagation rules you control, not model guessing.
+
+What this enables next
+
+Chapter-level grouping (by propagating last seen heading)
+
+Thematic labeling
+
+Embeddings / search
+
+Quantitative narrative analysis
+
+Careful, auditable AI-assisted reading
+
+All on clean, human-verifiable data.
+
+Repository philosophy
+
+This project favors:
+
+clarity over cleverness
+
+human control over autonomy
+
+reproducibility over novelty
+
+If you are working with sensitive texts, memoirs, or research material, this approach keeps you in charge.
+
+License / usage
+
+Use freely.
+Adapt carefully.
+Do not trust models with facts you can structure yourself.
